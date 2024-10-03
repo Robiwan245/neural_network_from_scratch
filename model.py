@@ -61,7 +61,7 @@ class NeuralNetwork:
         a = x.T
         self.states[f'A0'] = a
 
-        for layer in tqdm(range(self.n_layers - 1)):
+        for layer in range(self.n_layers - 1):
             z = np.dot(self.parameters[f'W{layer + 1}'], a) + self.parameters[f'b{layer + 1}']
             a = self.sigmoid(z)
             
@@ -111,20 +111,28 @@ class NeuralNetwork:
 def one_hot(y):
     one_hot_y = np.zeros((y.size, y.max() + 1))
     one_hot_y[np.arange(y.size), y] = 1
-    return one_hot_y.T
+    return one_hot_y
 
 (x_train, y_train), (x_test, y_test) = load_data()
 
 x_train = x_train / 255
-y_train = one_hot(y_train[:1028])
+y_train = one_hot(y_train)
 
 model = NeuralNetwork(x_train, y_train)
 
-for i in range(100):
-    out = model.forward(np.array(x_train[:1028]))
+batch_size = 1024
+n_batches = int(len(x_train) / batch_size)
 
-    acc = model.cross_entropy(y_train[:1028], out)
-    print(acc)
+for epoch in range(100):
+    for batch in range(n_batches):
+        start = batch * batch_size
+        end = start + batch_size
+        out = model.forward(np.array(x_train[start:end]))
 
-    model.backprop(out, y_train[:1028])
-    model.update()
+
+        model.backprop(out, y_train[start:end].T)
+        model.update()
+
+    if epoch % 5 == 0:
+        loss = model.cross_entropy(y_train[start:end].T, out)
+        print(f'Loss at epoch {epoch}: {loss:.2f}')
